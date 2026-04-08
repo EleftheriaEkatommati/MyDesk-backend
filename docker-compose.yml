@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    container_name: mydesk_db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5433:5432"
+    networks:
+      - mydesk
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: mydesk_pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - mydesk
+
+  # backend:
+  #   build: .
+  #   container_name: mydesk_backend
+  #   command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+  #   volumes:
+  #     - .:/app
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     - db
+  #   networks:
+  #     - mydesk
+  #   env_file:
+  #     - .env
+
+networks:
+  mydesk:
+    driver: bridge
+
+volumes:
+  postgres_data:
