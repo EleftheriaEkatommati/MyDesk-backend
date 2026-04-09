@@ -25,7 +25,7 @@ def seed():
 
         # Seed Users
         for user_data in data['users']:
-            existing_user = db.query(User).filter(User.email == user_data['email']).first()
+            existing_user = db.query(User).filter(User.id == user_data['id']).first()
             if not existing_user:
                 user = User(
                     id=user_data['id'],
