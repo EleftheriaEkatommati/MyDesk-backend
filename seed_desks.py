@@ -27,6 +27,12 @@ DESKS_DATA = [
     {"id": "301", "x": 80, "y": 460, "rotation": 90, "floor": "3rd Floor"},
 ]
 
+# Desks to book initially
+BOOKED_DESKS = [
+    {"id": "101", "booked_by": 1},
+    {"id": "102", "booked_by": 1},
+]
+
 
 def seed_desks():
     Base.metadata.create_all(bind=engine)
@@ -50,6 +56,13 @@ def seed_desks():
                     raise ValueError(f"No floor found for {floor_name}")
                 new_desk = Desk(**desk_dict, floor_id=floor_id)
                 db.add(new_desk)
+
+        # Book some desks
+        for booked in BOOKED_DESKS:
+            desk = db.query(Desk).filter(Desk.id == booked["id"]).first()
+            if desk and not desk.is_booked:
+                desk.is_booked = True
+                desk.booked_by = booked["booked_by"]
 
         db.commit()
         print("Desks and floors seeded successfully!")

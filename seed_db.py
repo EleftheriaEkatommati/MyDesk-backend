@@ -3,6 +3,13 @@ from database.session import SessionLocal
 from database.session import engine
 from database.base import Base
 from models.user import User, Role, RoleEnum
+from models.floor import Floor
+
+FLOORS = [
+    {"id": 1, "floor_number": 1, "floor_name": "1st Floor"},
+    {"id": 2, "floor_number": 2, "floor_name": "2nd Floor"},
+    {"id": 3, "floor_number": 3, "floor_name": "3rd Floor"},
+]
 
 def seed():
     # Ensure tables are created
@@ -34,6 +41,14 @@ def seed():
                     hashed_password=user_data['hashed_password']
                 )
                 db.add(user)
+        db.commit()
+
+        # Seed Floors
+        for floor_data in FLOORS:
+            existing_floor = db.query(Floor).filter(Floor.id == floor_data['id']).first()
+            if not existing_floor:
+                floor = Floor(**floor_data)
+                db.add(floor)
         db.commit()
 
         # Seed User Roles (Many-to-Many Relationship)
