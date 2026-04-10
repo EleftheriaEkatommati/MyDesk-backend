@@ -14,7 +14,7 @@
             "id": 1,
             "email": "admin@mydesk.com",
             "name": "Admin User",
-            "hashed_password": "$2b$12$276L2miZ7A90Dn1D41G/QeDVv4u76AWqeWmmGXmzw9VPnb7t4dhVC"
+            "hashed_password": "$2b$12$QnyvFMzTBbNHDpSkAeczeexaqg7CwD4eZ8cUAD98pjzv6AZb0Hzve"
         },
         {
             "id": 2,

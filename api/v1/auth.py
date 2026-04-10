@@ -14,7 +14,7 @@ from core.security import verify_password, create_access_token, get_current_user
 from core.config import settings
 
 class LoginRequest(BaseModel):
-    username: str
+    email: str
     password: str
 
 class AuthResponse(BaseModel):
@@ -54,7 +54,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=AuthResponse) 
 def login(request: LoginRequest, db: Session = Depends(get_db)): 
-    user = crud_user.get_user_by_email(db, email=request.username)
+    user = crud_user.get_user_by_email(db, email=request.email)
     if not user or not verify_password(request.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
