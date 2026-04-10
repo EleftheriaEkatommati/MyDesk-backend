@@ -60,10 +60,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 def get_current_active_admin(current_user: User = Depends(get_current_user)):
-    if not any(role.name == RoleEnum.admin for role in current_user.roles):
+    # The user object from get_current_user has a lazy-loaded 'role' relationship.
+    # Accessing current_user.role will trigger a query to fetch the role.
+    # We need to check if the role is present and if its name is 'admin'.
+    if not current_user.role or current_user.role.name != RoleEnum.admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="The user doesn't have enough privileges",
         )
     return current_user
-

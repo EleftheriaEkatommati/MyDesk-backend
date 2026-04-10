@@ -6,3 +6,4 @@ Base = declarative_base()
 from models.user import User, Role
 from models.desk import Desk
 from models.floor import Floor
+from models.booking import Booking

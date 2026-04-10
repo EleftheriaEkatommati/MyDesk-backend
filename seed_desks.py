@@ -2,7 +2,9 @@ from database.session import SessionLocal
 from database.session import engine
 from database.base import Base
 from models.desk import Desk
+from models.booking import Booking
 from models.floor import Floor
+from datetime import date
 
 FLOORS = [
     {"floor_number": 1, "floor_name": "1st Floor"},
@@ -31,6 +33,8 @@ DESKS_DATA = [
 BOOKED_DESKS = [
     {"id": "101", "booked_by": 1},
     {"id": "102", "booked_by": 1},
+    {"id": "201", "booked_by": 2},
+    {"id": "104", "booked_by": 2},
 ]
 
 
@@ -57,12 +61,18 @@ def seed_desks():
                 new_desk = Desk(**desk_dict, floor_id=floor_id)
                 db.add(new_desk)
 
-        # Book some desks
+        # Book some desks by creating Booking records for today
+        today = date.today()
         for booked in BOOKED_DESKS:
-            desk = db.query(Desk).filter(Desk.id == booked["id"]).first()
-            if desk and not desk.is_booked:
-                desk.is_booked = True
-                desk.booked_by = booked["booked_by"]
+            # Check if a booking already exists for this desk on this day to avoid duplicates
+            existing_booking = db.query(Booking).filter_by(desk_id=booked["id"], booking_date=today).first()
+            if not existing_booking:
+                new_booking = Booking(
+                    desk_id=booked["id"],
+                    user_id=booked["booked_by"],
+                    booking_date=today
+                )
+                db.add(new_booking)
 
         db.commit()
         print("Desks and floors seeded successfully!")

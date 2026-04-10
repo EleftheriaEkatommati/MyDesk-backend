@@ -51,14 +51,13 @@ def seed():
                 db.add(floor)
         db.commit()
 
-        # Seed User Roles (Many-to-Many Relationship)
+        # Assign User Roles (One-to-Many Relationship)
         for ur_data in data['user_roles']:
             user = db.query(User).filter(User.id == ur_data['user_id']).first()
-            role = db.query(Role).filter(Role.id == ur_data['role_id']).first()
-            
-            if user and role:
-                if role not in user.roles:
-                    user.roles.append(role)
+            # Since a user can now only have one role, we just assign it.
+            # If a user has multiple roles in dummy_data, the last one will be set.
+            if user:
+                user.role_id = ur_data['role_id']
         db.commit()
         
         print("Database seeded successfully with dummy_data.json!")

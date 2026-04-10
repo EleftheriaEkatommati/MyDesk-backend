@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-
-from database.session import SessionLocal
+ 
+from database.session import SessionLocal, get_db # Import get_db
 from database.base import Base
 from database.session import engine
 
@@ -27,14 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(desks.router, prefix="/api/desks", tags=["desks"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
@@ -50,4 +42,3 @@ def health_check(db: Session = Depends(get_db)):
         return {"status": "ok", "database": "ok"}
     except Exception as e:
         return {"status": "ok", "database": "error", "detail": str(e)}
-

@@ -27,6 +27,7 @@ def create_user(
 ):
     """
     Create a new user.
+    Here we check if the email is already registered, if not we create a new user in the database.  
     """
     db_user = crud_user.get_user_by_email(db, email=user.email)
     if db_user:
@@ -38,22 +39,22 @@ def create_user(
     # This is a good place to assign roles if they are passed in the request
     return new_user
 
-from schemas.user import User, UserCreate, Role as RoleSchema
+from schemas.user import User
 from pydantic import BaseModel
 from models.user import RoleEnum
 
-class RolesUpdate(BaseModel):
-    roles: List[RoleEnum]
+class RoleUpdate(BaseModel):
+    role: RoleEnum
 
-@router.put("/users/{user_id}/roles", response_model=User)
-def update_user_roles(
+@router.put("/users/{user_id}/role", response_model=User)
+def update_user_role(
     user_id: int,
-    roles: RolesUpdate,
+    role_update: RoleUpdate,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_active_admin),
 ):
     """
-    Update roles for a user.
+    Update role for a user. A user can only have one role.
     """
     db_user = crud_user.get_user_by_id(db, user_id=user_id)
     if not db_user:
@@ -61,8 +62,15 @@ def update_user_roles(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    updated_user = crud_user.update_user_roles(db, user=db_user, roles=roles.roles)
-    return updated_user
+
+    role = crud_user.get_role_by_name(db, name=role_update.role)
+    if not role:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Role '{role_update.role}' not found")
+
+    db_user.role_id = role.id
+    db.commit()
+    db.refresh(db_user)
+    return db_user
 
 @router.get("/users", response_model=List[User])
 def read_users(

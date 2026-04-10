@@ -1,104 +1,100 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session, joinedload # Import joinedload
+from typing import List, Optional
+from datetime import date
 
-from database.session import SessionLocal
-from models.desk import Desk as DeskModel
-from models.floor import Floor as FloorModel
-from models.user import User as UserModel
-from schemas.desk import DeskResponse, DeskBookRequest
+from database.session import get_db # Import get_db from the shared location
+from models.desk import Desk
+from models.floor import Floor
+from models.booking import Booking, BookingStatus
+from models.user import User
+from schemas.desk import DeskSchema, DeskBookingRequest
 from schemas.floor import FloorResponse
-from core.security import get_current_user
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@router.get("", response_model=List[DeskResponse])
-def get_desks(db: Session = Depends(get_db)):
-    desks = db.query(DeskModel).all()
-    return [
-        DeskResponse(
-            id=str(desk.id),
-            x=desk.x,
-            y=desk.y,
-            rotation=desk.rotation,
-            floorId=desk.floor_id,
-            floorName=desk.floor_entity.floor_name if desk.floor_entity else None,
-            floor=desk.floor_entity.floor_name if desk.floor_entity else None,
-            isBooked=desk.is_booked,
-            bookedBy=str(desk.booked_by) if desk.booked_by else None
-        ) for desk in desks
-    ]
+@router.get("/", response_model=List[DeskSchema])
+def get_all_desks(db: Session = Depends(get_db)):
+    """
+    API endpoint to get all desks.
+    """
+    desks = db.query(Desk).options(joinedload(Desk.floor_entity)).order_by(Desk.id).all()
+    return desks
 
 @router.get("/floors", response_model=List[FloorResponse])
-def get_floors(db: Session = Depends(get_db)):
-    floors = db.query(FloorModel).all()
-    return [
-        FloorResponse(
-            id=floor.id,
-            floorNumber=floor.floor_number,
-            floorName=floor.floor_name
-        ) for floor in floors
-    ]
+def get_all_floors(db: Session = Depends(get_db)):
+    """
+    API endpoint to get all floors.
+    """
+    floors = db.query(Floor).order_by(Floor.floor_number).all()
+    return floors
 
-@router.get("/floor/{floor_name}", response_model=List[DeskResponse])
-def get_desks_by_floor(floor_name: str, db: Session = Depends(get_db)):
-    desks = db.query(DeskModel).join(DeskModel.floor_entity).filter(FloorModel.floor_name == floor_name).all()
-    if not desks:
-        return []  # Floor not available
-    return [
-        DeskResponse(
-            id=str(desk.id),
-            x=desk.x,
-            y=desk.y,
-            rotation=desk.rotation,
-            floorId=desk.floor_id,
-            floorName=desk.floor_entity.floor_name if desk.floor_entity else None,
-            floor=desk.floor_entity.floor_name if desk.floor_entity else None,
-            isBooked=desk.is_booked,
-            bookedBy=str(desk.booked_by) if desk.booked_by else None
-        ) for desk in desks
-    ]
 
-@router.post("/{desk_id}/book", response_model=DeskResponse)
+@router.post("/{desk_id}/book", response_model=DeskSchema, status_code=status.HTTP_200_OK)
 def book_desk(
     desk_id: str,
-    request: DeskBookRequest,
-    db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user)
+    booking_request: DeskBookingRequest,
+    db: Session = Depends(get_db)
 ):
-    desk = db.query(DeskModel).filter(DeskModel.id == desk_id).first()
+    """
+    API endpoint to book a specific desk.
+
+    The `booking_request` should contain `user_id` and `booking_date`.
+    - **desk_id**: The ID of the desk to book (e.g., "101").
+    - **booking_request**: JSON body containing the user_id of the person booking.
+    """
+    desk = db.query(Desk).options(joinedload(Desk.floor_entity)).filter(Desk.id == desk_id).first()
+
     if not desk:
-        raise HTTPException(status_code=404, detail="Desk not found")
-        
-    if request.book:
-        if desk.is_booked:
-            raise HTTPException(status_code=400, detail="Desk is already booked")
-        desk.is_booked = True
-        desk.booked_by = current_user.id
-    else:
-        if desk.booked_by != current_user.id:
-            raise HTTPException(status_code=403, detail="You cannot unbook a desk booked by another user")
-        desk.is_booked = False
-        desk.booked_by = None
-        
-    db.commit()
-    db.refresh(desk)
-    
-    return DeskResponse(
-        id=str(desk.id),
-        x=desk.x,
-        y=desk.y,
-        rotation=desk.rotation,
-        floorId=desk.floor_id,
-        floorName=desk.floor_entity.floor_name if desk.floor_entity else None,
-        floor=desk.floor_entity.floor_name if desk.floor_entity else None,
-        isBooked=desk.is_booked,
-        bookedBy=str(desk.booked_by) if desk.booked_by else None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Desk with ID {desk_id} not found"
+        )
+
+    # The DeskBookingRequest schema should be updated to include `booking_date: date`
+    booking_date = getattr(booking_request, 'booking_date', date.today())
+
+    # Check if desk is already booked for the given date
+    existing_booking = db.query(Booking).filter(
+        Booking.desk_id == desk_id,
+        Booking.booking_date == booking_date,
+        Booking.status == BookingStatus.ACTIVE
+    ).first()
+
+    if existing_booking:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Desk {desk_id} is already booked for {booking_date}"
+        )
+
+    # Verify user exists
+    user = db.query(User).filter(User.id == booking_request.user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with ID {booking_request.user_id} not found")
+
+    new_booking = Booking(
+        desk_id=desk_id,
+        user_id=booking_request.user_id,
+        booking_date=booking_date,
+        status=BookingStatus.ACTIVE
     )
+    db.add(new_booking)
+    db.commit()
+
+    # Refresh desk to reflect any changes in relationships if needed by the schema
+    db.refresh(desk)
+
+    return desk
+
+@router.get("/floor/{floor_id}", response_model=List[DeskSchema])
+def get_desks_by_floor(floor_id: int, db: Session = Depends(get_db)):
+    """
+    API endpoint to get all desks for a specific floor.
+    """
+    floor = db.query(Floor).filter(Floor.id == floor_id).first()
+    if not floor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Floor with id {floor_id} not found")
+
+    desks = db.query(Desk).options(joinedload(Desk.floor_entity)).filter(Desk.floor_id == floor_id).all()
+    
+    return desks

@@ -39,16 +39,17 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
-    new_user = crud_user.create_user(db=db, user=user)
-    
-    # Assign default 'user' role
     user_role = crud_user.get_role_by_name(db, RoleEnum.user)
     if not user_role:
         # This should be seeded in a real app
         raise HTTPException(status_code=500, detail="Default user role not found.")
-    
-    crud_user.assign_role_to_user(db, new_user, user_role)
-    
+
+    # The create_user function in crud should be updated to just create the user object
+    new_user = crud_user.create_user(db=db, user=user)
+
+    new_user.role_id = user_role.id
+    db.commit()
+    db.refresh(new_user)
     return new_user
 
 @router.post("/login", response_model=AuthResponse) 

@@ -24,7 +24,7 @@ class UserCreate(UserBase):
 
 class User(UserBase):
     id: int
-    roles: List[Role] = []
+    role: Optional[Role] = None
 
     class Config:
         from_attributes = True

@@ -10,8 +10,6 @@ class Desk(Base):
     y = Column(Float, nullable=False)
     rotation = Column(Integer, nullable=False)
     floor_id = Column(Integer, ForeignKey("floors.id"), nullable=False)
-    is_booked = Column(Boolean, default=False)
-    booked_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     floor_entity = relationship("Floor", back_populates="desks")
-    user = relationship("User")
+    bookings = relationship("Booking", back_populates="desk")
