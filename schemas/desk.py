@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field, computed_field
 from typing import Optional
-from datetime import date
 
 class DeskBase(BaseModel):
     id: str # Assuming desk ID is a string like "101"
@@ -37,7 +36,3 @@ class DeskSchema(DeskBase):
     class Config:
         from_attributes = True # Enable ORM mode for SQLAlchemy models
         populate_by_name = True # Allow population by field name (e.g., floorId)
-
-class DeskBookingRequest(BaseModel):
-    user_id: int
-    booking_date: date

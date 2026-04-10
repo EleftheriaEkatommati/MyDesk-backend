@@ -8,8 +8,9 @@ from models.desk import Desk
 from models.floor import Floor
 from models.booking import Booking, BookingStatus
 from models.user import User
-from schemas.desk import DeskSchema, DeskBookingRequest
+from schemas.desk import DeskSchema
 from schemas.floor import FloorResponse
+from schemas.booking import BookingCreate, Booking as BookingSchema
 
 router = APIRouter()
 
@@ -30,10 +31,10 @@ def get_all_floors(db: Session = Depends(get_db)):
     return floors
 
 
-@router.post("/{desk_id}/book", response_model=DeskSchema, status_code=status.HTTP_200_OK)
+@router.post("/{desk_id}/book", response_model=BookingSchema, status_code=status.HTTP_201_CREATED)
 def book_desk(
     desk_id: str,
-    booking_request: DeskBookingRequest,
+    booking_request: BookingCreate,
     db: Session = Depends(get_db)
 ):
     """
@@ -51,20 +52,17 @@ def book_desk(
             detail=f"Desk with ID {desk_id} not found"
         )
 
-    # The DeskBookingRequest schema should be updated to include `booking_date: date`
-    booking_date = getattr(booking_request, 'booking_date', date.today())
-
     # Check if desk is already booked for the given date
     existing_booking = db.query(Booking).filter(
         Booking.desk_id == desk_id,
-        Booking.booking_date == booking_date,
+        Booking.booking_date == booking_request.booking_date,
         Booking.status == BookingStatus.ACTIVE
     ).first()
 
     if existing_booking:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Desk {desk_id} is already booked for {booking_date}"
+            detail=f"Desk {desk_id} is already booked for {booking_request.booking_date}"
         )
 
     # Verify user exists
@@ -75,16 +73,19 @@ def book_desk(
     new_booking = Booking(
         desk_id=desk_id,
         user_id=booking_request.user_id,
-        booking_date=booking_date,
+        booking_date=booking_request.booking_date,
         status=BookingStatus.ACTIVE
     )
     db.add(new_booking)
     db.commit()
+    
+    # Query the new booking again to eager load relationships for the response
+    created_booking = db.query(Booking).options(
+        joinedload(Booking.user),
+        joinedload(Booking.desk).joinedload(Desk.floor_entity)
+    ).filter(Booking.id == new_booking.id).one()
 
-    # Refresh desk to reflect any changes in relationships if needed by the schema
-    db.refresh(desk)
-
-    return desk
+    return created_booking
 
 @router.get("/floor/{floor_id}", response_model=List[DeskSchema])
 def get_desks_by_floor(floor_id: int, db: Session = Depends(get_db)):

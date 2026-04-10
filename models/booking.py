@@ -1,8 +1,8 @@
 import enum
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, Enum
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship
+
 from database.base import Base
-from datetime import date
 
 class BookingStatus(str, enum.Enum):
     ACTIVE = "active"
@@ -14,8 +14,8 @@ class Booking(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     desk_id = Column(String, ForeignKey("desks.id"), nullable=False)
-    booking_date = Column(Date, nullable=False, default=date.today)
-    status = Column(Enum(BookingStatus), default=BookingStatus.ACTIVE, nullable=False)
+    booking_date = Column(Date, nullable=False, index=True)
+    status = Column(SQLAlchemyEnum(BookingStatus), nullable=False, default=BookingStatus.ACTIVE, index=True)
 
     user = relationship("User", back_populates="bookings")
     desk = relationship("Desk", back_populates="bookings")
