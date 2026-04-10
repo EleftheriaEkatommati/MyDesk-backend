@@ -33,8 +33,11 @@ DESKS_DATA = [
 BOOKED_DESKS = [
     {"id": "101", "booked_by": 1},
     {"id": "102", "booked_by": 1},
+    {"id": "103", "booked_by": 1},
+    {"id": "104", "booked_by": 1},
     {"id": "201", "booked_by": 2},
-    {"id": "104", "booked_by": 2},
+    {"id": "202", "booked_by": 2},
+    {"id": "203", "booked_by": 2},  
 ]
 
 

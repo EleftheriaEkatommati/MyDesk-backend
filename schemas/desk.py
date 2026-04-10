@@ -12,20 +12,15 @@ class DeskCreate(DeskBase):
     pass
 
 class DeskSchema(DeskBase):
-    # Add floorId, floorName, floor for frontend compatibility
-    # These will be populated from the ORM relationship
+    isBooked: bool = False
+    bookedBy: Optional[int] = None
+    floorName: Optional[str] = None
+    
+    # Add floorId and floor for frontend compatibility
     @computed_field
     @property
     def floorId(self) -> int:
         return self.floor_id
-
-    @computed_field
-    @property
-    def floorName(self) -> Optional[str]:
-        # Assumes 'floor_entity' relationship is loaded (eager-loaded in API queries)
-        if hasattr(self, 'floor_entity') and self.floor_entity:
-            return self.floor_entity.floor_name
-        return None
 
     @computed_field
     @property

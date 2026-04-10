@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload # Import joinedload
 from typing import List, Optional
 from datetime import date
-
+from fastapi import Query
 from database.session import get_db # Import get_db from the shared location
 from models.desk import Desk
 from models.floor import Floor
@@ -15,12 +15,39 @@ from schemas.booking import BookingCreate, Booking as BookingSchema
 router = APIRouter()
 
 @router.get("/", response_model=List[DeskSchema])
-def get_all_desks(db: Session = Depends(get_db)):
+def get_all_desks(date: date = Query(...), db: Session = Depends(get_db)):
     """
-    API endpoint to get all desks.
+    API endpoint to get all desks for a specific date.
+    Query parameter 'date' (required) to filter bookings for a specific date.
     """
     desks = db.query(Desk).options(joinedload(Desk.floor_entity)).order_by(Desk.id).all()
-    return desks
+    
+    # Get all bookings for the date
+    bookings = db.query(Booking).filter(
+        Booking.booking_date == date,
+        Booking.status == BookingStatus.ACTIVE
+    ).all()
+    booked_desk_map = {b.desk_id: b.user_id for b in bookings}
+    
+    # Create response dicts with all needed fields
+    result = []
+    for desk in desks:
+        is_booked = desk.id in booked_desk_map
+        booked_by = booked_desk_map.get(desk.id)
+        floor_name = desk.floor_entity.floor_name if desk.floor_entity else None
+        
+        result.append(DeskSchema(
+            id=desk.id,
+            x=desk.x,
+            y=desk.y,
+            rotation=desk.rotation,
+            floor_id=desk.floor_id,
+            isBooked=is_booked,
+            bookedBy=booked_by,
+            floorName=floor_name
+        ))
+    
+    return result
 
 @router.get("/floors", response_model=List[FloorResponse])
 def get_all_floors(db: Session = Depends(get_db)):
@@ -88,14 +115,50 @@ def book_desk(
     return created_booking
 
 @router.get("/floor/{floor_id}", response_model=List[DeskSchema])
-def get_desks_by_floor(floor_id: int, db: Session = Depends(get_db)):
+def get_desks_by_floor(
+    floor_id: int,
+    date: date = Query(...),
+    db: Session = Depends(get_db)
+):
     """
     API endpoint to get all desks for a specific floor.
+    
+    Required query parameter 'date' to filter bookings for that date.
     """
     floor = db.query(Floor).filter(Floor.id == floor_id).first()
     if not floor:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Floor with id {floor_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Floor with id {floor_id} not found"
+        )
 
-    desks = db.query(Desk).options(joinedload(Desk.floor_entity)).filter(Desk.floor_id == floor_id).all()
+    desks = db.query(Desk).options(joinedload(Desk.floor_entity)).filter(Desk.floor_id == floor_id).order_by(Desk.id).all()
     
-    return desks
+    # Get all bookings for the date
+    bookings = db.query(Booking).filter(
+        Booking.booking_date == date,
+        Booking.status == BookingStatus.ACTIVE
+    ).all()
+    booked_desk_map = {b.desk_id: b.user_id for b in bookings}
+    
+    # Create response dicts with all needed fields
+    result = []
+    for desk in desks:
+        is_booked = desk.id in booked_desk_map
+        booked_by = booked_desk_map.get(desk.id)
+        floor_name = desk.floor_entity.floor_name if desk.floor_entity else None
+        
+        result.append(DeskSchema(
+            id=desk.id,
+            x=desk.x,
+            y=desk.y,
+            rotation=desk.rotation,
+            floor_id=desk.floor_id,
+            isBooked=is_booked,
+            bookedBy=booked_by,
+            floorName=floor_name
+        ))
+    
+    return result
+
+    return result
