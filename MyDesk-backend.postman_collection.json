@@ -404,37 +404,6 @@
 						}
 					},
 					"response": []
-				},
-				{
-					"name": "Get My Profile (User Data)",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{authToken}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/v1/auth/me/profile",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"v1",
-								"auth",
-								"me",
-								"profile"
-							]
-						}
-					},
-					"response": []
 				}
 			]
 		},

@@ -23,6 +23,20 @@
             "name": "Regular",
             "surname": "User",
             "password": "user"
+        },
+        {
+            "id": 3,
+            "email": "jane.doe@mydesk.com",
+            "name": "Jane",
+            "surname": "Doe",
+            "password": "password123"
+        },
+        {
+            "id": 4,
+            "email": "john.smith@mydesk.com",
+            "name": "John",
+            "surname": "Smith",
+            "password": "password456"
         }
     ],
     "user_roles": [
@@ -32,6 +46,14 @@
         },
         {
             "user_id": 2,
+            "role_id": 2
+        },
+        {
+            "user_id": 3,
+            "role_id": 2
+        },
+        {
+            "user_id": 4,
             "role_id": 2
         }
     ],

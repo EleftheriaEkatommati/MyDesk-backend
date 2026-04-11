@@ -20,6 +20,7 @@ class DeskSchema(DeskBase):
 class DeskWithStatusSchema(DeskSchema):
     is_booked: bool = Field(alias='isBooked')
     booked_by: Optional[int] = Field(None, alias='bookedBy')
+    booking_id: Optional[int] = Field(None, alias='bookingId')
 
     class Config(DeskSchema.Config):
         populate_by_name = True
