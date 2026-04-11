@@ -18,7 +18,6 @@ class BookingBase(BaseModel):
         from_attributes = True
 
 class BookingCreate(BaseModel):
-    user_id: int
     booking_date: date
 
 class Booking(BookingBase):

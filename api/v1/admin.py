@@ -5,19 +5,12 @@ from sqlalchemy.orm import Session
 from starlette import status
 
 from crud import user as crud_user
-from schemas.user import User, UserCreate
-from core.security import get_current_active_admin
-from models.user import User as UserModel
+from core.security import get_current_active_admin, get_password_hash
+from schemas.user import User, UserCreate, RoleUpdate
+from models.user import User as UserModel, RoleEnum
+from database.session import get_db
 
 router = APIRouter()
-
-def get_db():
-    from database.session import SessionLocal
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.post("/users", response_model=User, status_code=status.HTTP_201_CREATED)
 def create_user(
@@ -35,16 +28,24 @@ def create_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
-    new_user = crud_user.create_user(db=db, user=user)
-    # This is a good place to assign roles if they are passed in the request
+    hashed_password = get_password_hash(user.password)
+    new_user = crud_user.create_user(
+        db=db,
+        email=user.email,
+        name=user.name,
+        surname=user.surname,
+        hashed_password=hashed_password
+    )
+    
+    # Assign the default 'user' role, consistent with the /register endpoint
+    user_role = crud_user.get_role_by_name(db, RoleEnum.user)
+    if not user_role:
+        raise HTTPException(status_code=500, detail="Default user role not found. Please seed the database.")
+    
+    new_user.role_id = user_role.id
+    db.commit()
+    db.refresh(new_user)
     return new_user
-
-from schemas.user import User
-from pydantic import BaseModel
-from models.user import RoleEnum
-
-class RoleUpdate(BaseModel):
-    role: RoleEnum
 
 @router.put("/users/{user_id}/role", response_model=User)
 def update_user_role(

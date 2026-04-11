@@ -1,33 +1,25 @@
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field
 from typing import Optional
 
+from .floor import FloorResponse
+
 class DeskBase(BaseModel):
-    id: str # Assuming desk ID is a string like "101"
+    id: str
     x: float
     y: float
-    rotation: float
-    floor_id: int # Foreign key to Floor
-
-class DeskCreate(DeskBase):
-    pass
+    rotation: int
+    floor_id: int = Field(alias='floorId')
 
 class DeskSchema(DeskBase):
-    isBooked: bool = False
-    bookedBy: Optional[int] = None
-    floorName: Optional[str] = None
-    
-    # Add floorId and floor for frontend compatibility
-    @computed_field
-    @property
-    def floorId(self) -> int:
-        return self.floor_id
-
-    @computed_field
-    @property
-    def floor(self) -> Optional[str]:
-        # For backward compatibility, same as floorName
-        return self.floorName
+    floor_entity: Optional[FloorResponse] = None
 
     class Config:
-        from_attributes = True # Enable ORM mode for SQLAlchemy models
-        populate_by_name = True # Allow population by field name (e.g., floorId)
+        from_attributes = True
+        populate_by_name = True
+
+class DeskWithStatusSchema(DeskSchema):
+    is_booked: bool = Field(alias='isBooked')
+    booked_by: Optional[int] = Field(None, alias='bookedBy')
+
+    class Config(DeskSchema.Config):
+        populate_by_name = True

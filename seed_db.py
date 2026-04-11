@@ -4,6 +4,8 @@ from database.session import engine
 from database.base import Base
 from models.user import User, Role, RoleEnum
 from models.floor import Floor
+from models.desk import Desk
+from core.security import get_password_hash
 
 FLOORS = [
     {"id": 1, "floor_number": 1, "floor_name": "1st Floor"},
@@ -12,9 +14,6 @@ FLOORS = [
 ]
 
 def seed():
-    # Ensure tables are created
-    Base.metadata.create_all(bind=engine)
-    
     db = SessionLocal()
     try:
         with open('dummy_data.json', 'r') as f:
@@ -38,7 +37,8 @@ def seed():
                     id=user_data['id'],
                     email=user_data['email'],
                     name=user_data['name'],
-                    hashed_password=user_data['hashed_password']
+                    surname=user_data.get('surname'),
+                    hashed_password=get_password_hash(user_data['password'])
                 )
                 db.add(user)
         db.commit()
@@ -50,6 +50,15 @@ def seed():
                 floor = Floor(**floor_data)
                 db.add(floor)
         db.commit()
+
+        # Seed Desks
+        for desk_data in data['desks']:
+            existing_desk = db.query(Desk).filter(Desk.id == desk_data['id']).first()
+            if not existing_desk:
+                desk = Desk(**desk_data)
+                db.add(desk)
+        db.commit()
+
 
         # Assign User Roles (One-to-Many Relationship)
         for ur_data in data['user_roles']:

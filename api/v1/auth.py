@@ -8,9 +8,9 @@ from starlette import status
 from crud import user as crud_user
 from schemas.user import UserCreate, User
 from schemas.token import Token
-from database.session import SessionLocal
+from database.session import get_db
 from models.user import RoleEnum, User as UserModel
-from core.security import verify_password, create_access_token, get_current_user
+from core.security import verify_password, create_access_token, get_current_user, get_password_hash
 from core.config import settings
 
 class LoginRequest(BaseModel):
@@ -23,13 +23,6 @@ class AuthResponse(BaseModel):
     token: str
 
 router = APIRouter()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED) # here get as arguments the user details and create a new user in the database
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
@@ -45,7 +38,14 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Default user role not found.")
 
     # The create_user function in crud should be updated to just create the user object
-    new_user = crud_user.create_user(db=db, user=user)
+    hashed_password = get_password_hash(user.password)
+    new_user = crud_user.create_user(
+        db=db,
+        email=user.email,
+        name=user.name,
+        surname=user.surname,
+        hashed_password=hashed_password
+    )
 
     new_user.role_id = user_role.id
     db.commit()
@@ -82,3 +82,10 @@ def read_users_me(current_user: UserModel = Depends(get_current_user)):
         name=current_user.name or current_user.email,
         token=access_token
     )
+
+@router.get("/me/profile", response_model=User)
+def read_current_user_profile(current_user: UserModel = Depends(get_current_user)):
+    """
+    Get the profile of the currently authenticated user.
+    """
+    return current_user

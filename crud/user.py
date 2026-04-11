@@ -1,14 +1,12 @@
 from sqlalchemy.orm import Session, joinedload
 from models.user import User, Role, RoleEnum
 from schemas.user import UserCreate
-from core.security import get_password_hash
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).options(joinedload(User.role)).filter(User.email == email).first()
 
-def create_user(db: Session, user: UserCreate):
-    hashed_password = get_password_hash(user.password)
-    db_user = User(email=user.email, name=user.name, hashed_password=hashed_password)
+def create_user(db: Session, email: str, name: str | None, surname: str | None, hashed_password: str):
+    db_user = User(email=email, name=name, surname=surname, hashed_password=hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)

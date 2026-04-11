@@ -9,20 +9,13 @@ from sqlalchemy.orm import Session
 
 from core.config import settings
 from crud import user as crud_user
-from database.session import SessionLocal
+from database.session import get_db
 from schemas.token import TokenData
 from models.user import RoleEnum, User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto") # this is  needed to hash and verify passwords, bcrypt is a secure hashing algorithm that is widely used for password hashing
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login") # this is a standard way to define the token URL for OAuth2 authentication, it tells FastAPI where to find the login endpoint that issues JWT tokens
 #for example, when a user tries to access a protected endpoint, FastAPI will look for the JWT token in the Authorization header, extract it and pass it to the get_current_user function to verify it and retrieve the user details.
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)

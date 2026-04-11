@@ -1,44 +1,27 @@
-from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
- 
-from database.session import SessionLocal, get_db # Import get_db
-from database.base import Base
-from database.session import engine
+from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
 
-from api.v1 import auth, admin, desks
+from api.v1 import admin, auth, bookings, desks
 
-Base.metadata.create_all(bind=engine)
+app = FastAPI(title="MyDesk API")
 
-app = FastAPI(title="MyDesk Backend")
-
-# Configure CORS
-origins = [
-    "http://localhost:3000",  # Default React/Next.js/Vue port
-    "http://localhost:5173",  # Default Vite port
-    "*"  # Allows all origins (for development only, you should restrict this in production)
-]
-
+# CORS (Cross-Origin Resource Sharing) Middleware
+# This allows your frontend to make requests to your backend.
+# In production, you should restrict `allow_origins` to your frontend's domain.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-app.include_router(desks.router, prefix="/api/desks", tags=["desks"])
-app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
+# Include all the API routers
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
+app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
+app.include_router(desks.router, prefix="/api/v1/desks", tags=["Desks & Floors"])
+app.include_router(bookings.router, prefix="/api/v1/bookings", tags=["Bookings"])
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to MyDesk Backend"}
-
-@app.get("/api/health")
-def health_check(db: Session = Depends(get_db)):
-    try:
-        db.execute("SELECT 1")
-        return {"status": "ok", "database": "ok"}
-    except Exception as e:
-        return {"status": "ok", "database": "error", "detail": str(e)}
+    return {"message": "Welcome to the MyDesk API"}

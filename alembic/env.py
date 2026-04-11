@@ -8,6 +8,11 @@ from alembic import context
 # Import your app's settings and models' base
 from core.config import settings
 from database.base import Base
+# Import all the models here for Alembic's autogenerate to work
+from models.user import User, Role
+from models.desk import Desk
+from models.floor import Floor
+from models.booking import Booking
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

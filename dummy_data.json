@@ -13,14 +13,16 @@
         {
             "id": 1,
             "email": "admin@mydesk.com",
-            "name": "Admin User",
-            "hashed_password": "$2b$12$QnyvFMzTBbNHDpSkAeczeexaqg7CwD4eZ8cUAD98pjzv6AZb0Hzve"
+            "name": "Admin",
+            "surname": "User",
+            "password": "admin"
         },
         {
             "id": 2,
             "email": "user@mydesk.com",
-            "name": "Regular User",
-            "hashed_password": "$2b$12$276L2miZ7A90Dn1D41G/QeDVv4u76AWqeWmmGXmzw9VPnb7t4dhVC"
+            "name": "Regular",
+            "surname": "User",
+            "password": "user"
         }
     ],
     "user_roles": [
@@ -29,12 +31,19 @@
             "role_id": 1
         },
         {
-            "user_id": 1,
-            "role_id": 2
-        },
-        {
             "user_id": 2,
             "role_id": 2
         }
+    ],
+    "desks": [
+        { "id": "101", "x": 60, "y": 80, "rotation": 180, "floor_id": 1 },
+        { "id": "102", "x": 120, "y": 80, "rotation": 180, "floor_id": 1 },
+        { "id": "103", "x": 180, "y": 80, "rotation": 180, "floor_id": 1 },
+        { "id": "104", "x": 240, "y": 80, "rotation": 180, "floor_id": 1 },
+        { "id": "201", "x": 60, "y": 150, "rotation": 0, "floor_id": 2 },
+        { "id": "202", "x": 120, "y": 150, "rotation": 0, "floor_id": 2 },
+        { "id": "203", "x": 180, "y": 150, "rotation": 0, "floor_id": 2 },
+        { "id": "301", "x": 60, "y": 220, "rotation": 90, "floor_id": 3 },
+        { "id": "302", "x": 120, "y": 220, "rotation": 90, "floor_id": 3 }
     ]
 }
