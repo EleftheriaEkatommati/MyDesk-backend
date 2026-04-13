@@ -1,5 +1,5 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -20,6 +20,7 @@ class LoginRequest(BaseModel):
 class AuthResponse(BaseModel):
     id: str
     name: str
+    role: str
     token: str
 
 router = APIRouter()
@@ -64,13 +65,15 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
+    # Ensure the role is fetched and included
     return AuthResponse(
         id=str(user.id),
         name=user.name or user.email,
+        role=user.role.name.value if user.role else RoleEnum.user.value, # Default to 'user' if role somehow missing
         token=access_token
     )
 
-@router.get("/me", response_model=AuthResponse) 
+@router.get("/me", response_model=AuthResponse)
 def read_users_me(current_user: UserModel = Depends(get_current_user)):
     # To use existing get_current_user logic but returning the frontend required shape
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
