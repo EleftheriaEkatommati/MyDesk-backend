@@ -233,6 +233,11 @@ def google_callback(
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     jwt_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
 
+    frontend_url = _normalize_google_setting(settings.FRONTEND_URL)
+    if frontend_url:
+        separator = '&' if '?' in frontend_url else '?'
+        return RedirectResponse(f"{frontend_url}{separator}token={jwt_token}")
+
     return AuthResponse(
         id=str(user.id),
         name=user.name or user.email,

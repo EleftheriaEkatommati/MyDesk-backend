@@ -1,4 +1,5 @@
 import json
+from sqlalchemy import text
 from database.session import SessionLocal
 from database.session import engine
 from database.base import Base
@@ -67,6 +68,12 @@ def seed():
             # If a user has multiple roles in dummy_data, the last one will be set.
             if user:
                 user.role_id = ur_data['role_id']
+        db.commit()
+
+        # Reset sequences so auto-generated IDs do not collide with explicit seed IDs
+        db.execute(text("SELECT setval(pg_get_serial_sequence('users','id'), (SELECT MAX(id) FROM users))"))
+        db.execute(text("SELECT setval(pg_get_serial_sequence('roles','id'), (SELECT MAX(id) FROM roles))"))
+        db.execute(text("SELECT setval(pg_get_serial_sequence('floors','id'), (SELECT MAX(id) FROM floors))"))
         db.commit()
         
         print("Database seeded successfully with dummy_data.json!")
