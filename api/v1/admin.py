@@ -1,11 +1,12 @@
 from typing import List
-
+from models.booking import Booking
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from starlette import status
-
+from schemas.desk import DeskCreate
 from crud import user as crud_user
 from core.security import get_current_active_admin, get_password_hash
+from models.desk import Desk
 from schemas.user import User, UserCreate, RoleUpdate
 from models.user import User as UserModel, RoleEnum
 from database.session import get_db
@@ -85,3 +86,80 @@ def read_users(
     """
     users = crud_user.get_users(db, skip=skip, limit=limit)
     return users
+
+
+
+@router.delete("/users/{user_id}", status_code=204)
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_admin),
+):
+    """
+    Delete a user by ID.
+    """
+    db_user = crud_user.get_user_by_id(db, user_id=user_id)
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    db.delete(db_user)
+    db.commit()
+
+@router.delete("/bookings/{booking_id}", status_code=204)
+def delete_booking(
+    booking_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_admin),
+):
+    """
+    Delete a booking by ID.
+    """
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Booking not found",
+        )
+    db.delete(booking)
+    db.commit()
+    return {"message": "Booking deleted successfully"}
+
+@router.post("/desks", status_code=201)
+def create_desk(
+    desk: DeskCreate,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_admin),
+):
+    new_desk = Desk(
+        id=desk.id,
+        floor_id=desk.floor_id,
+        x=desk.x,
+        y=desk.y,
+        rotation=desk.rotation,
+    )
+    db.add(new_desk)
+    db.commit()
+    db.refresh(new_desk)
+    return new_desk
+
+
+@router.delete("/desks/{desk_id}", status_code=204)
+def delete_desk(
+    desk_id: str,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_admin),
+):
+    """
+    Delete a desk by ID.
+    """
+    desk = db.query(Desk).filter(Desk.id == desk_id).first()
+    if not desk:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Desk not found",
+        )
+    db.delete(desk)
+    db.commit()
+    return {"message": "Desk deleted successfully"}

@@ -24,3 +24,7 @@ class DeskWithStatusSchema(DeskSchema):
 
     class Config(DeskSchema.Config):
         populate_by_name = True
+
+class DeskCreate(DeskBase):
+    class Config:
+        populate_by_name = True
