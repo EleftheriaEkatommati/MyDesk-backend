@@ -166,6 +166,11 @@ def get_desks_by_floor(floor_id: int, booking_date: date, db: Session = Depends(
     
     # 2. Get all active bookings for these desks on the given date
     desk_ids = [desk.id for desk in desks]
+
+
+    print("Desk IDs:", desk_ids)
+    print("Desk ID types:", [type(d) for d in desk_ids])
+
     bookings = db.query(Booking).filter(
         Booking.desk_id.in_(desk_ids),
         Booking.booking_date == booking_date,
