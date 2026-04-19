@@ -53,12 +53,14 @@ def seed():
         db.commit()
 
         # Seed Desks
-        for desk_data in data['desks']:
-            existing_desk = db.query(Desk).filter(Desk.id == desk_data['id']).first()
-            if not existing_desk:
+        # Since desk IDs are now auto-generated, we only seed them if the table is empty
+        # to prevent creating duplicates on subsequent runs of the seed script.
+        if db.query(Desk).count() == 0:
+            for desk_data in data['desks']:
+                # The 'id' is no longer in desk_data, it will be auto-generated.
                 desk = Desk(**desk_data)
                 db.add(desk)
-        db.commit()
+            db.commit()
 
 
         # Assign User Roles (One-to-Many Relationship)
@@ -70,7 +72,8 @@ def seed():
                 user.role_id = ur_data['role_id']
         db.commit()
 
-        # Reset sequences so auto-generated IDs do not collide with explicit seed IDs
+        # Reset sequences for tables where we manually inserted specific IDs.
+        # This ensures that new records created via the API don't have ID conflicts.
         db.execute(text("SELECT setval(pg_get_serial_sequence('users','id'), (SELECT MAX(id) FROM users))"))
         db.execute(text("SELECT setval(pg_get_serial_sequence('roles','id'), (SELECT MAX(id) FROM roles))"))
         db.execute(text("SELECT setval(pg_get_serial_sequence('floors','id'), (SELECT MAX(id) FROM floors))"))

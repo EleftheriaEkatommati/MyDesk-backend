@@ -4,7 +4,7 @@ from typing import Optional
 from .floor import FloorResponse
 
 class DeskBase(BaseModel):
-    id: str
+    id: int
     x: float
     y: float
     rotation: int
@@ -25,6 +25,19 @@ class DeskWithStatusSchema(DeskSchema):
     class Config(DeskSchema.Config):
         populate_by_name = True
 
-class DeskCreate(DeskBase):
+class DeskCreate(BaseModel):
+    x: float
+    y: float
+    rotation: int
+    floor_id: int = Field(alias='floorId')
+
+    class Config:
+        populate_by_name = True
+
+class DeskUpdate(BaseModel):
+    x: Optional[float] = None
+    y: Optional[float] = None
+    rotation: Optional[int] = None
+
     class Config:
         populate_by_name = True

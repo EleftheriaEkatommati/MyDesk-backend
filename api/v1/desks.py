@@ -81,7 +81,7 @@ def get_floor_by_id(floor_id: int, db: Session = Depends(get_db)):
 
 @router.post("/{desk_id}/book", response_model=BookingSchema, status_code=status.HTTP_201_CREATED)
 def book_desk(
-    desk_id: str,
+    desk_id: int,
     booking_request: BookingCreate, # The user_id field should be removed from this schema
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)

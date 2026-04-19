@@ -58,14 +58,14 @@
         }
     ],
     "desks": [
-        { "id": "101", "x": 60, "y": 80, "rotation": 180, "floor_id": 1 },
-        { "id": "102", "x": 120, "y": 80, "rotation": 180, "floor_id": 1 },
-        { "id": "103", "x": 180, "y": 80, "rotation": 180, "floor_id": 1 },
-        { "id": "104", "x": 240, "y": 80, "rotation": 180, "floor_id": 1 },
-        { "id": "201", "x": 60, "y": 150, "rotation": 0, "floor_id": 2 },
-        { "id": "202", "x": 120, "y": 150, "rotation": 0, "floor_id": 2 },
-        { "id": "203", "x": 180, "y": 150, "rotation": 0, "floor_id": 2 },
-        { "id": "301", "x": 60, "y": 220, "rotation": 90, "floor_id": 3 },
-        { "id": "302", "x": 120, "y": 220, "rotation": 90, "floor_id": 3 }
+        { "x": 60, "y": 80, "rotation": 180, "floor_id": 1 },
+        { "x": 120, "y": 80, "rotation": 180, "floor_id": 1 },
+        { "x": 180, "y": 80, "rotation": 180, "floor_id": 1 },
+        { "x": 240, "y": 80, "rotation": 180, "floor_id": 1 },
+        { "x": 60, "y": 150, "rotation": 0, "floor_id": 2 },
+        { "x": 120, "y": 150, "rotation": 0, "floor_id": 2 },
+        { "x": 180, "y": 150, "rotation": 0, "floor_id": 2 },
+        { "x": 60, "y": 220, "rotation": 90, "floor_id": 3 },
+        { "x": 120, "y": 220, "rotation": 90, "floor_id": 3 }
     ]
 }

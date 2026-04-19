@@ -1,10 +1,11 @@
-from typing import List
+from typing import List, Optional
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from database.session import get_db
+from models.desk import Desk
 from models.user import User
 from models.booking import Booking, BookingStatus
 from schemas.booking import Booking as BookingSchema
@@ -12,21 +13,29 @@ from core.security import get_current_user
 
 router = APIRouter()
 
-@router.get("/me", response_model=List[BookingSchema])
+@router.get("/me", response_model=List[BookingSchema], response_model_by_alias=True)
 def get_my_bookings(
+    date: Optional[date] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Retrieve all bookings for the currently authenticated user.
+    Retrieve bookings for the currently authenticated user.
+    If a date is provided, it returns active bookings for that specific date.
+    Otherwise, it returns all bookings.
     """
-    bookings = db.query(Booking).options(
+    query = db.query(Booking).options(
         joinedload(Booking.user),
-        joinedload(Booking.desk)
-    ).filter(Booking.user_id == current_user.id).order_by(Booking.booking_date.desc()).all()
+        joinedload(Booking.desk).joinedload(Desk.floor_entity)
+    ).filter(Booking.user_id == current_user.id)
+
+    if date:
+        query = query.filter(Booking.booking_date == date, Booking.status == BookingStatus.ACTIVE)
+
+    bookings = query.order_by(Booking.booking_date.desc()).all()
     return bookings
 
-@router.put("/{booking_id}/cancel", response_model=BookingSchema)
+@router.put("/{booking_id}/cancel", response_model=BookingSchema, response_model_by_alias=True)
 def cancel_booking(
     booking_id: int,
     db: Session = Depends(get_db),

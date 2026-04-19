@@ -5,11 +5,11 @@ from database.base import Base
 class Desk(Base):
     __tablename__ = "desks"
 
-    id = Column(String(255), primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     x = Column(Float, nullable=False)
     y = Column(Float, nullable=False)
     rotation = Column(Integer, nullable=False)
     floor_id = Column(Integer, ForeignKey("floors.id"), nullable=False)
 
     floor_entity = relationship("Floor", back_populates="desks")
-    bookings = relationship("Booking", back_populates="desk")
+    bookings = relationship("Booking", back_populates="desk", cascade="all, delete-orphan")

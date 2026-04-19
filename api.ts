@@ -1,14 +1,17 @@
 export type Booking = {
   id: number
-  desk_id: string
+  desk_id: number
   user_id: number
   booking_date: string
   status: string
+  // Add nested objects that the backend can provide
+  user?: User
+  desk?: Desk
 }
 
 export type Desk = {
-  id: string
-  floor_id: number
+  id: number
+  floorId: number
   x: number
   y: number
   rotation: number
@@ -93,11 +96,11 @@ export async function getDesks(date: string): Promise<Desk[]> {
       x: d.x,
       y: d.y,
       rotation: d.rotation,
-      floor_id: d.floor_id,
+      floorId: d.floorId,
       floor_entity: d.floor_entity,
-      isBooked: d.is_booked,
-      bookedBy: d.booked_by,
-      bookingId: d.booking_id,
+      isBooked: d.isBooked,
+      bookedBy: d.bookedBy,
+      bookingId: d.bookingId,
     }),
   )
 }
@@ -192,16 +195,16 @@ export async function getDesksByFloor(
       x: d.x,
       y: d.y,
       rotation: d.rotation,
-      floor_id: d.floor_id,
+      floorId: d.floorId,
       floor_entity: d.floor_entity,
-      isBooked: d.is_booked,
-      bookedBy: d.booked_by,
-      bookingId: d.booking_id,
+      isBooked: d.isBooked,
+      bookedBy: d.bookedBy,
+      bookingId: d.bookingId,
     }),
   )
 }
 export async function bookDesk(
-  deskId: string,
+  deskId: number,
   token: string,
   date: string,
 ): Promise<Booking> {
@@ -240,9 +243,16 @@ export async function unbookDesk(
  * @param token The user's authentication token.
  * @returns A promise that resolves to an array of Booking objects.
  */
-export async function getMyBookings(token: string): Promise<Booking[]> {
+export async function getMyBookings(
+  token: string,
+  date?: string,
+): Promise<Booking[]> {
   // Corrected the API path from /auth/me/bookings to /bookings/me
-  const res = await fetch(`${API_BASE}/bookings/me`, {
+  let url = `${API_BASE}/bookings/me`
+  if (date) {
+    url += `?date=${date}`
+  }
+  const res = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

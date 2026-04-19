@@ -9,7 +9,7 @@ from .desk import DeskSchema
 
 class BookingBase(BaseModel):
     id: int
-    desk_id: str
+    desk_id: int
     user_id: int
     booking_date: date
     status: BookingStatus
