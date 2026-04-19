@@ -65,7 +65,10 @@ def update_user_role(
             detail="User not found",
         )
 
-    role = crud_user.get_role_by_name(db, name=role_update.role)
+    role = crud_user.get_role_by_name(
+        db,
+        RoleEnum(role_update.role)
+    )
     if not role:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Role '{role_update.role}' not found")
 

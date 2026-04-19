@@ -4,7 +4,7 @@ from datetime import timedelta
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
-
+from models.user import RoleEnum
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
@@ -107,7 +107,9 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
+    
     user_role = crud_user.get_role_by_name(db, RoleEnum.user)
+
     if not user_role:
         # This should be seeded in a real app
         raise HTTPException(status_code=500, detail="Default user role not found.")
@@ -256,6 +258,7 @@ def read_users_me(current_user: UserModel = Depends(get_current_user)):
     return AuthResponse(
         id=str(current_user.id),
         name=current_user.name or current_user.email,
+        role=current_user.role.name.value,
         token=access_token
     )
 
