@@ -3,10 +3,11 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
+from pydantic import BaseModel, Field
 
 from database.session import get_db
 from models.desk import Desk
-from models.user import User
+from models.user import User, RoleEnum
 from models.booking import Booking, BookingStatus
 from schemas.booking import Booking as BookingSchema
 from core.security import get_current_user
@@ -49,7 +50,7 @@ def cancel_booking(
     if not booking:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
 
-    if booking.user_id != current_user.id and current_user.role.name != 'admin':
+    if booking.user_id != current_user.id and (not current_user.role or current_user.role.name != RoleEnum.admin):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to cancel this booking")
 
     if booking.status == BookingStatus.CANCELLED:
@@ -63,6 +64,62 @@ def cancel_booking(
     updated_booking = db.query(Booking).options(
         joinedload(Booking.user),
         joinedload(Booking.desk)
+    ).filter(Booking.id == booking.id).one()
+
+    return updated_booking
+
+class CheckInRequest(BaseModel):
+    qr_data: str = Field(..., description="The raw data scanned from the QR code, e.g., 'BOOKING_ID:123'")
+
+@router.post("/check-in", response_model=BookingSchema, response_model_by_alias=True)
+def check_in_booking(
+    check_in_request: CheckInRequest,
+    db: Session = Depends(get_db),
+    # For security, let's assume an admin or a device with admin rights performs the check-in.
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Check in a user for their booking using the data from a QR code.
+    """
+    # 1. Parse QR data to get booking ID
+    try:
+        prefix, booking_id_str = check_in_request.qr_data.split(':')
+        if prefix != "BOOKING_ID":
+            raise ValueError("Invalid QR code format.")
+        booking_id = int(booking_id_str)
+    except (ValueError, IndexError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid QR code data. Expected format: 'BOOKING_ID:<id>'",
+        )
+
+    # 2. Find the booking
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Booking with ID {booking_id} not found")
+
+    # 3. Perform validation checks
+    if booking.status == BookingStatus.CANCELLED:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This booking has been cancelled.")
+    
+    if booking.status == BookingStatus.CHECKED_IN:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This booking has already been checked in.")
+
+    # Check if the booking is for today
+    if booking.booking_date != date.today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"This booking is for {booking.booking_date}, not for today ({date.today()})."
+        )
+
+    # 4. Update status to CHECKED_IN
+    booking.status = BookingStatus.CHECKED_IN
+    db.commit()
+    
+    # 5. Return the updated booking with relationships loaded
+    updated_booking = db.query(Booking).options(
+        joinedload(Booking.user),
+        joinedload(Booking.desk).joinedload(Desk.floor_entity)
     ).filter(Booking.id == booking.id).one()
 
     return updated_booking

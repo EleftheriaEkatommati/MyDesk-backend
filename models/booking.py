@@ -7,6 +7,7 @@ from database.base import Base
 class BookingStatus(str, enum.Enum):
     ACTIVE = "active"
     CANCELLED = "cancelled"
+    CHECKED_IN = "checked_in"
 
 class Booking(Base):
     __tablename__ = "bookings"

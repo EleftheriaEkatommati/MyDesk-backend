@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload # Import joinedload
 from typing import List, Optional
 from datetime import date
@@ -13,6 +13,7 @@ from schemas.desk import DeskSchema, DeskWithStatusSchema
 from schemas.floor import FloorResponse
 from schemas.booking import BookingCreate, Booking as BookingSchema
 from core.security import get_current_user
+from core.email import send_booking_confirmation_email
 
 router = APIRouter()
 
@@ -82,6 +83,7 @@ def get_floor_by_id(floor_id: int, db: Session = Depends(get_db)):
 @router.post("/{desk_id}/book", response_model=BookingSchema, status_code=status.HTTP_201_CREATED)
 def book_desk(
     desk_id: int,
+    background_tasks: BackgroundTasks,
     booking_request: BookingCreate, # The user_id field should be removed from this schema
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -147,6 +149,11 @@ def book_desk(
         joinedload(Booking.desk).joinedload(Desk.floor_entity)
     ).filter(Booking.id == new_booking.id).one()
     print(f"--- DB: Re-fetched created booking ID {created_booking.id} for response. ---")
+
+    # Add email sending to background tasks so the user doesn't have to wait
+    background_tasks.add_task(
+        send_booking_confirmation_email, current_user, created_booking
+    )
 
     return created_booking
 
