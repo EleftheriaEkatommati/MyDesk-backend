@@ -92,6 +92,12 @@ def check_in_booking(
     """
     Check in a user for their booking using the data from a QR code.
     """
+
+    if not current_user.role or current_user.role.name != RoleEnum.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can perform check-in"
+        )
     # 1. Parse QR data to get booking ID
     try:
         prefix, booking_id_str = check_in_request.qr_data.split(':')
