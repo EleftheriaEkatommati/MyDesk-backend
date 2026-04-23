@@ -1,12 +1,15 @@
 from typing import List
-from models.booking import Booking
-from fastapi import APIRouter, Depends, HTTPException
+from models.booking import Booking, BookingStatus
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from starlette import status
 from schemas.desk import DeskCreate, DeskUpdate, DeskSchema
 from crud import user as crud_user
 from core.security import get_current_active_admin, get_password_hash
+from core.email import send_desk_deleted_notification_email, send_admin_booking_cancellation_email, send_floor_deleted_notification_email
 from models.desk import Desk
+from schemas.floor import FloorResponse, FloorCreate
+from models.floor import Floor
 from schemas.user import User, UserCreate, RoleUpdate
 from models.user import User as UserModel, RoleEnum
 from database.session import get_db
@@ -113,21 +116,35 @@ def delete_user(
 @router.delete("/bookings/{booking_id}", status_code=204)
 def delete_booking(
     booking_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_active_admin),
 ):
     """
-    Delete a booking by ID.
+    Delete a booking by ID. If the booking is active, it notifies the
+    affected user via email that their booking was cancelled.
     """
-    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    # Eager load the user to send an email notification
+    booking = db.query(Booking).options(joinedload(Booking.user)).filter(Booking.id == booking_id).first()
     if not booking:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Booking not found",
         )
+
+    # If the booking was active, notify the user that an admin has cancelled it.
+    if booking.user and booking.status == BookingStatus.ACTIVE:
+        background_tasks.add_task(
+            send_admin_booking_cancellation_email,
+            booking.user.email,
+            booking.user.name,
+            booking.desk_id,
+            booking.booking_date,
+        )
+
     db.delete(booking)
     db.commit()
-    return {"message": "Booking deleted successfully"}
+    return None
 
 @router.post("/desks", response_model=DeskSchema, status_code=201)
 def create_desk(
@@ -177,18 +194,114 @@ def update_desk(
 @router.delete("/desks/{desk_id}", status_code=204)
 def delete_desk(
     desk_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_active_admin),
 ):
     """
-    Delete a desk by ID.
+    Delete a desk by ID. If the desk has active bookings, it notifies the
+    affected users via email that their booking is cancelled.
     """
-    desk = db.query(Desk).filter(Desk.id == desk_id).first()
+    # Eagerly load the desk with its bookings and the user for each booking
+    # to efficiently send notifications without extra DB queries.
+    desk = db.query(Desk).options(
+        joinedload(Desk.bookings).joinedload(Booking.user)
+    ).filter(Desk.id == desk_id).first()
+
     if not desk:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Desk not found",
         )
+
+    # Find all active bookings for this desk and schedule email notifications.
+    # The bookings are already loaded due to the joinedload above.
+    active_bookings = [b for b in desk.bookings if b.status == BookingStatus.ACTIVE]
+
+    for booking in active_bookings:
+        # The user is pre-loaded, so this doesn't cause an extra DB query.
+        if booking.user:
+            background_tasks.add_task(
+                send_desk_deleted_notification_email,
+                booking.user.email,
+                booking.user.name,
+                booking.booking_date,
+                desk.id
+            )
+
+    # Now, delete the desk. The `cascade="all, delete-orphan"` on the
+    # Desk.bookings relationship will automatically delete all associated bookings.
     db.delete(desk)
     db.commit()
-    return {"message": "Desk deleted successfully"}
+    return None
+
+@router.post("/floors", response_model=FloorResponse, status_code=status.HTTP_201_CREATED)
+def create_floor(
+    floor_data: FloorCreate,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_admin),
+):
+    """
+    Create a new floor.
+    """
+    existing_floor = db.query(Floor).filter(Floor.floor_number == floor_data.floor_number).first()
+    if existing_floor:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Floor with number {floor_data.floor_number} already exists."
+        )
+
+    new_floor = Floor(
+        floor_number=floor_data.floor_number,
+        floor_name=floor_data.floor_name
+    )
+    db.add(new_floor)
+    db.commit()
+    db.refresh(new_floor)
+    return new_floor
+
+@router.delete("/floors/{floor_id}", status_code=204)
+def delete_floor(
+    floor_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_active_admin),
+):
+    """
+    Delete a floor and all its associated desks.
+    This will also cancel all active bookings for the desks on this floor and
+    notify the affected users via email.
+    """
+    # Eagerly load the floor with its desks, and for each desk, its bookings,
+    # and for each booking, its user. This is a deep load to get all necessary
+    # data in one go for sending notifications.
+    floor = db.query(Floor).options(
+        joinedload(Floor.desks).joinedload(Desk.bookings).joinedload(Booking.user)
+    ).filter(Floor.id == floor_id).first()
+
+    if not floor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Floor with ID {floor_id} not found",
+        )
+
+    # Collect all active bookings and schedule notifications
+    for desk in floor.desks:
+        active_bookings = [b for b in desk.bookings if b.status == BookingStatus.ACTIVE]
+        for booking in active_bookings:
+            if booking.user:
+                background_tasks.add_task(
+                    send_floor_deleted_notification_email,
+                    user_email=booking.user.email,
+                    user_name=booking.user.name,
+                    booking_date=booking.booking_date,
+                    desk_id=desk.id,
+                    floor_name=floor.floor_name,
+                    floor_number=floor.floor_number,
+                )
+
+    # Now, delete the floor. The cascade settings will handle deleting all
+    # associated desks and their bookings automatically.
+    db.delete(floor)
+    db.commit()
+    return None

@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from pydantic import BaseModel, Field
 
@@ -11,6 +11,7 @@ from models.user import User, RoleEnum
 from models.booking import Booking, BookingStatus
 from schemas.booking import Booking as BookingSchema
 from core.security import get_current_user
+from core.email import send_booking_cancellation_email
 
 router = APIRouter()
 
@@ -39,34 +40,44 @@ def get_my_bookings(
 @router.put("/{booking_id}/cancel", response_model=BookingSchema, response_model_by_alias=True)
 def cancel_booking(
     booking_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Cancel a booking by its ID.
+    Cancel a booking by its ID and sends a cancellation email.
     """
-    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    # Eager load relationships needed for the email and the response
+    booking = db.query(Booking).options(
+        joinedload(Booking.user),
+        joinedload(Booking.desk).joinedload(Desk.floor_entity)
+    ).filter(Booking.id == booking_id).first()
 
     if not booking:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
 
+    # A user can cancel their own booking, or an admin can cancel any booking.
     if booking.user_id != current_user.id and (not current_user.role or current_user.role.name != RoleEnum.admin):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to cancel this booking")
 
     if booking.status == BookingStatus.CANCELLED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Booking is already cancelled")
 
+    # Soft-delete the booking by changing its status
     booking.status = BookingStatus.CANCELLED
     db.commit()
     db.refresh(booking)
-    
-    # Re-query to get the object with eager-loaded relationships for the response
-    updated_booking = db.query(Booking).options(
-        joinedload(Booking.user),
-        joinedload(Booking.desk)
-    ).filter(Booking.id == booking.id).one()
 
-    return updated_booking
+    # Add email sending to background tasks so the user doesn't have to wait
+    background_tasks.add_task(
+        send_booking_cancellation_email,
+        booking.user.email,
+        booking.user.name,
+        booking.desk_id,
+        booking.booking_date,
+    )
+
+    return booking
 
 class CheckInRequest(BaseModel):
     qr_data: str = Field(..., description="The raw data scanned from the QR code, e.g., 'BOOKING_ID:123'")

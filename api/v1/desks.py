@@ -152,7 +152,12 @@ def book_desk(
 
     # Add email sending to background tasks so the user doesn't have to wait
     background_tasks.add_task(
-        send_booking_confirmation_email, current_user, created_booking
+        send_booking_confirmation_email,
+        current_user.email,
+        current_user.name,
+        created_booking.id,
+        created_booking.desk_id,
+        created_booking.booking_date,
     )
 
     return created_booking
