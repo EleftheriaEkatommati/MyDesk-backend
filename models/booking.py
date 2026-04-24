@@ -5,9 +5,9 @@ from sqlalchemy.orm import relationship
 from database.base import Base
 
 class BookingStatus(str, enum.Enum):
-    ACTIVE = "active"
-    CANCELLED = "cancelled"
-    CHECKED_IN = "checked_in"
+    ACTIVE = "ACTIVE"
+    CANCELLED = "CANCELLED"
+    CHECKED_IN = "CHECKED_IN"
 
 class Booking(Base):
     __tablename__ = "bookings"
