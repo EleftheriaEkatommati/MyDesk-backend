@@ -80,7 +80,10 @@ def cancel_booking(
     return booking
 
 class CheckInRequest(BaseModel):
-    qr_data: str = Field(..., description="The raw data scanned from the QR code, e.g., 'BOOKING_ID:123'")
+    qr_data: str = Field(
+        ...,
+        description="The raw data scanned from the QR code, e.g., 'BOOKING_ID:123'"
+    )
 
 @router.post("/check-in", response_model=BookingSchema, response_model_by_alias=True)
 def check_in_booking(
@@ -138,3 +141,28 @@ def check_in_booking(
     db.refresh(booking)
 
     return booking
+
+@router.get("/attendance", response_model=List[BookingSchema])
+def get_attendance(
+    date: date,
+    floor_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all checked-in users (attendance) for a given date.
+    Optionally filter by floor.
+    """
+
+    query = db.query(Booking).options(
+        joinedload(Booking.user),
+        joinedload(Booking.desk).joinedload(Desk.floor_entity)
+    ).filter(
+        Booking.booking_date == date,
+        Booking.status == BookingStatus.CHECKED_IN
+    )
+
+    if floor_id:
+        query = query.join(Booking.desk).filter(Desk.floor_id == floor_id)
+
+    return query.all()
