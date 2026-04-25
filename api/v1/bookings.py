@@ -111,14 +111,17 @@ def check_in_booking(
         )
 
     # 2. Find the booking
-    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    booking = db.query(Booking).options(
+        joinedload(Booking.user),
+        joinedload(Booking.desk).joinedload(Desk.floor_entity)
+    ).filter(Booking.id == booking_id).first()
     if not booking:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Booking with ID {booking_id} not found")
 
     # 3. Perform validation checks
     if booking.status == BookingStatus.CANCELLED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This booking has been cancelled.")
-    
+
     if booking.status == BookingStatus.CHECKED_IN:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This booking has already been checked in.")
 
@@ -132,11 +135,6 @@ def check_in_booking(
     # 4. Update status to CHECKED_IN
     booking.status = BookingStatus.CHECKED_IN
     db.commit()
-    
-    # 5. Return the updated booking with relationships loaded
-    updated_booking = db.query(Booking).options(
-        joinedload(Booking.user),
-        joinedload(Booking.desk).joinedload(Desk.floor_entity)
-    ).filter(Booking.id == booking.id).one()
+    db.refresh(booking)
 
-    return updated_booking
+    return booking
