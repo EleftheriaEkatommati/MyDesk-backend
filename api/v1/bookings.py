@@ -10,7 +10,8 @@ from models.desk import Desk
 from models.user import User, RoleEnum
 from models.booking import Booking, BookingStatus
 from schemas.booking import Booking as BookingSchema
-from core.security import get_current_user
+from schemas.user import User as UserSchema
+from core.security import get_current_user, get_current_active_admin
 from core.email import send_booking_cancellation_email
 
 router = APIRouter()
@@ -78,6 +79,81 @@ def cancel_booking(
     )
 
     return booking
+
+class BookingStatistics(BaseModel):
+    total_expected: int
+    checked_in: int
+    pending: int
+    cancelled: int
+    check_in_percentage: float
+
+class DailyReport(BaseModel):
+    stats: BookingStatistics
+    checked_in_bookings: List[BookingSchema]
+    pending_bookings: List[BookingSchema]
+    users_with_no_booking: List[UserSchema]
+
+@router.get("/report/daily", response_model=DailyReport, response_model_by_alias=True)
+def get_daily_booking_report(
+    report_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_admin)
+):
+    """
+    Provides a daily report for administrators, including booking statistics,
+    lists of checked-in/pending users, and users without a booking for a given date.
+    Defaults to the current date if not provided. This is suitable for polling.
+    """
+    if report_date is None:
+        report_date = date.today()
+
+    bookings_today = db.query(Booking).options(
+        joinedload(Booking.user),
+        joinedload(Booking.desk).joinedload(Desk.floor_entity)
+    ).filter(Booking.booking_date == report_date).order_by(Booking.id).all()
+
+    checked_in_bookings = []
+    pending_bookings = []
+    cancelled_count = 0
+
+    # Create a set of user IDs who have a booking today (any status)
+    booked_user_ids = {b.user_id for b in bookings_today}
+
+    for b in bookings_today:
+        if b.status == BookingStatus.CHECKED_IN:
+            checked_in_bookings.append(b)
+        elif b.status == BookingStatus.ACTIVE:
+            pending_bookings.append(b)
+        elif b.status == BookingStatus.CANCELLED:
+            cancelled_count += 1
+
+    # Query for users who are NOT in the set of booked user IDs.
+    # This is more efficient than loading all users and filtering in Python.
+    if booked_user_ids:
+        users_with_no_booking = db.query(User).options(joinedload(User.role)).filter(User.id.notin_(booked_user_ids)).order_by(User.name).all()
+    else:
+        users_with_no_booking = db.query(User).options(joinedload(User.role)).order_by(User.name).all()
+
+    checked_in_count = len(checked_in_bookings)
+    pending_count = len(pending_bookings)
+    total_expected = checked_in_count + pending_count
+
+    check_in_percentage = (round((checked_in_count / total_expected) * 100, 2) if total_expected > 0 else 0.0)
+
+    stats = BookingStatistics(
+        total_expected=total_expected,
+        checked_in=checked_in_count,
+        pending=pending_count,
+        cancelled=cancelled_count,
+        check_in_percentage=check_in_percentage
+    )
+
+    return DailyReport(
+        stats=stats,
+        checked_in_bookings=checked_in_bookings,
+        pending_bookings=pending_bookings,
+        users_with_no_booking=users_with_no_booking
+    )
 
 class CheckInRequest(BaseModel):
     qr_data: str = Field(

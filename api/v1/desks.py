@@ -28,7 +28,7 @@ def get_all_desks(date: date, db: Session = Depends(get_db)):
     # Get all active bookings for the given date
     bookings = db.query(Booking).filter(
         Booking.booking_date == date,
-        Booking.status == BookingStatus.ACTIVE or Booking.status == BookingStatus.CHECKED_IN
+        Booking.status.in_([BookingStatus.ACTIVE, BookingStatus.CHECKED_IN])
     ).all()
     print(f"--- DB: Fetched {len(bookings)} active bookings for date {date}. ---")
 
@@ -186,7 +186,7 @@ def get_desks_by_floor(floor_id: int, booking_date: date, db: Session = Depends(
     bookings = db.query(Booking).filter(
         Booking.desk_id.in_(desk_ids),
         Booking.booking_date == booking_date,
-        Booking.status == BookingStatus.ACTIVE
+        Booking.status.in_([BookingStatus.ACTIVE, BookingStatus.CHECKED_IN])
     ).all()
     print(f"--- DB: Fetched {len(bookings)} active bookings for floor {floor_id} on date {booking_date}. ---")
 
