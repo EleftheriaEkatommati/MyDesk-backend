@@ -28,7 +28,7 @@ def get_all_desks(date: date, db: Session = Depends(get_db)):
     # Get all active bookings for the given date
     bookings = db.query(Booking).filter(
         Booking.booking_date == date,
-        Booking.status == BookingStatus.ACTIVE
+        Booking.status == BookingStatus.ACTIVE or Booking.status == BookingStatus.CHECKED_IN
     ).all()
     print(f"--- DB: Fetched {len(bookings)} active bookings for date {date}. ---")
 
