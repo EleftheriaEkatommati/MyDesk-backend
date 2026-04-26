@@ -109,7 +109,7 @@ def book_desk(
     user_booking_on_date = db.query(Booking).filter(
         Booking.user_id == current_user.id,
         Booking.booking_date == booking_request.booking_date,
-        Booking.status == BookingStatus.ACTIVE
+        Booking.status.in_([BookingStatus.ACTIVE, BookingStatus.CHECKED_IN])
     ).first()
     print(f"--- DB: Checked for existing user booking on {booking_request.booking_date}. Found: {'Yes' if user_booking_on_date else 'No'}. ---")
 
@@ -123,7 +123,7 @@ def book_desk(
     existing_booking = db.query(Booking).filter(
         Booking.desk_id == desk_id,
         Booking.booking_date == booking_request.booking_date,
-        Booking.status == BookingStatus.ACTIVE
+        Booking.status.in_([BookingStatus.ACTIVE, BookingStatus.CHECKED_IN])
     ).first()
     print(f"--- DB: Checked if desk {desk_id} is booked on {booking_request.booking_date}. Found: {'Yes' if existing_booking else 'No'}. ---")
 
