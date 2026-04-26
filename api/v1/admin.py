@@ -163,7 +163,7 @@ def create_desk(
     db.add(new_desk)
     db.commit()
     # Re-query to load relationship for response, as it's not loaded by default
-    created_desk = db.query(Desk).options(joinedload(Desk.floor_entity)).filter(Desk.id == new_desk.id).one()
+    created_desk = db.query(Desk).options(joinedload(Desk.floor)).filter(Desk.id == new_desk.id).one()
     return created_desk
 
 
@@ -177,7 +177,7 @@ def update_desk(
     """
     Update a desk's properties (e.g., x, y, rotation).
     """
-    desk = db.query(Desk).options(joinedload(Desk.floor_entity)).filter(Desk.id == desk_id).first()
+    desk = db.query(Desk).options(joinedload(Desk.floor)).filter(Desk.id == desk_id).first()
     if not desk:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

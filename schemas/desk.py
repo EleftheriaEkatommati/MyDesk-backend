@@ -11,7 +11,7 @@ class DeskBase(BaseModel):
     floor_id: int = Field(alias='floorId')
 
 class DeskSchema(DeskBase):
-    floor_entity: Optional[FloorResponse] = None
+    floor: Optional[FloorResponse] = None
 
     class Config:
         from_attributes = True

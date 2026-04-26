@@ -11,5 +11,5 @@ class Desk(Base):
     rotation = Column(Integer, nullable=False)
     floor_id = Column(Integer, ForeignKey("floors.id"), nullable=False)
 
-    floor_entity = relationship("Floor", back_populates="desks")
+    floor = relationship("Floor", back_populates="desks")
     bookings = relationship("Booking", back_populates="desk", cascade="all, delete-orphan")

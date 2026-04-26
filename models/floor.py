@@ -9,4 +9,4 @@ class Floor(Base):
     floor_number = Column(Integer, nullable=False)
     floor_name = Column(String(255), nullable=True)
 
-    desks = relationship("Desk", back_populates="floor_entity", cascade="all, delete-orphan")
+    desks = relationship("Desk", back_populates="floor", cascade="all, delete-orphan")

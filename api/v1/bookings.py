@@ -29,7 +29,7 @@ def get_my_bookings(
     """
     query = db.query(Booking).options(
         joinedload(Booking.user),
-        joinedload(Booking.desk).joinedload(Desk.floor_entity)
+        joinedload(Booking.desk).joinedload(Desk.floor)
     ).filter(Booking.user_id == current_user.id)
 
     if date:
@@ -51,7 +51,7 @@ def cancel_booking(
     # Eager load relationships needed for the email and the response
     booking = db.query(Booking).options(
         joinedload(Booking.user),
-        joinedload(Booking.desk).joinedload(Desk.floor_entity)
+        joinedload(Booking.desk).joinedload(Desk.floor)
     ).filter(Booking.id == booking_id).first()
 
     if not booking:
@@ -109,7 +109,7 @@ def get_daily_booking_report(
 
     bookings_today = db.query(Booking).options(
         joinedload(Booking.user),
-        joinedload(Booking.desk).joinedload(Desk.floor_entity)
+        joinedload(Booking.desk).joinedload(Desk.floor)
     ).filter(Booking.booking_date == report_date).order_by(Booking.id).all()
 
     checked_in_bookings = []
@@ -192,7 +192,7 @@ def check_in_booking(
     # 2. Find the booking
     booking = db.query(Booking).options(
         joinedload(Booking.user),
-        joinedload(Booking.desk).joinedload(Desk.floor_entity)
+        joinedload(Booking.desk).joinedload(Desk.floor)
     ).filter(Booking.id == booking_id).first()
     if not booking:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Booking with ID {booking_id} not found")
@@ -232,7 +232,7 @@ def get_attendance(
 
     query = db.query(Booking).options(
         joinedload(Booking.user),
-        joinedload(Booking.desk).joinedload(Desk.floor_entity)
+        joinedload(Booking.desk).joinedload(Desk.floor)
     ).filter(
         Booking.booking_date == date,
         Booking.status == BookingStatus.CHECKED_IN

@@ -22,7 +22,7 @@ def get_all_desks(date: date, db: Session = Depends(get_db)):
     """
     API endpoint to get all desks with their booking status for a given date.
     """
-    desks = db.query(Desk).options(joinedload(Desk.floor_entity)).order_by(Desk.id).all()
+    desks = db.query(Desk).options(joinedload(Desk.floor)).order_by(Desk.id).all()
     print(f"--- DB: Fetched {len(desks)} desks. ---")
 
     # Get all active bookings for the given date
@@ -47,7 +47,7 @@ def get_all_desks(date: date, db: Session = Depends(get_db)):
             y=desk.y,
             rotation=desk.rotation,
             floor_id=desk.floor_id,
-            floor_entity=desk.floor_entity,
+            floor=desk.floor,
             is_booked=is_booked,
             booked_by=booking.user_id if booking else None,
             booking_id=booking.id if booking else None,
@@ -96,7 +96,7 @@ def book_desk(
     - **booking_request**: JSON body containing the date for the booking.
     The user is identified from the authentication token.
     """
-    desk = db.query(Desk).options(joinedload(Desk.floor_entity)).filter(Desk.id == desk_id).first()
+    desk = db.query(Desk).options(joinedload(Desk.floor)).filter(Desk.id == desk_id).first()
     print(f"--- DB: Fetched desk by ID {desk_id}. Found: {'Yes' if desk else 'No'}. ---")
 
     if not desk:
@@ -146,7 +146,7 @@ def book_desk(
     # Query the new booking again to eager load relationships for the response
     created_booking = db.query(Booking).options(
         joinedload(Booking.user),
-        joinedload(Booking.desk).joinedload(Desk.floor_entity)
+        joinedload(Booking.desk).joinedload(Desk.floor)
     ).filter(Booking.id == new_booking.id).one()
     print(f"--- DB: Re-fetched created booking ID {created_booking.id} for response. ---")
 
@@ -173,7 +173,7 @@ def get_desks_by_floor(floor_id: int, booking_date: date, db: Session = Depends(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Floor with id {floor_id} not found")
 
     # 1. Get all desks for the floor
-    desks = db.query(Desk).options(joinedload(Desk.floor_entity)).filter(Desk.floor_id == floor_id).order_by(Desk.id).all()
+    desks = db.query(Desk).options(joinedload(Desk.floor)).filter(Desk.floor_id == floor_id).order_by(Desk.id).all()
     print(f"--- DB: Fetched {len(desks)} desks for floor {floor_id}. ---")
     
     # 2. Get all active bookings for these desks on the given date
@@ -205,7 +205,7 @@ def get_desks_by_floor(floor_id: int, booking_date: date, db: Session = Depends(
             y=desk.y,
             rotation=desk.rotation,
             floor_id=desk.floor_id,
-            floor_entity=desk.floor_entity,
+            floor=desk.floor,
             is_booked=is_booked,
             booked_by=booking.user_id if booking else None,
             booking_id=booking.id if booking else None,

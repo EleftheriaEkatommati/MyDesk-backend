@@ -13,7 +13,7 @@ def get_booking_by_id(db: Session, booking_id: int) -> Optional[Booking]:
         db.query(Booking)
         .options(
             joinedload(Booking.user),
-            joinedload(Booking.desk).joinedload(Desk.floor_entity),
+            joinedload(Booking.desk).joinedload(Desk.floor),
         )
         .filter(Booking.id == booking_id)
         .first()
@@ -34,7 +34,7 @@ def get_bookings_by_user(db: Session, user_id: int) -> List[Booking]:
         db.query(Booking)
         .options(
             joinedload(Booking.user),
-            joinedload(Booking.desk).joinedload(Desk.floor_entity),
+            joinedload(Booking.desk).joinedload(Desk.floor),
         )
         .filter(Booking.user_id == user_id)
         .order_by(Booking.booking_date.desc())
