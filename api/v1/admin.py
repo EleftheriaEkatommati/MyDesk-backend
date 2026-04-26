@@ -110,6 +110,10 @@ def delete_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
+
+    # Before deleting the user, delete all their associated bookings to prevent IntegrityError.
+    db.query(Booking).filter(Booking.user_id == user_id).delete(synchronize_session=False)
+
     db.delete(db_user)
     db.commit()
 
