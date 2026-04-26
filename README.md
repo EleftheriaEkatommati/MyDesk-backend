@@ -163,5 +163,16 @@ MyDesk-backend/
 ├── .env.example        # Example environment variables
 ├── main.py             # Main FastAPI application entry point
 ├── seed_db.py          # Script to seed the database
+├── docs/               # Project documentation
 └── README.md           # This file
 ```
+
+## Documentation
+
+Additional project documentation is available in the `docs/` folder:
+
+- `docs/architecture.md`
+- `docs/deployment.md`
+- `docs/api.md`
+- `docs/auth.md`
+- `docs/ui-integration.md`
